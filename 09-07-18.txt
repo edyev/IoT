@@ -1,0 +1,82 @@
+Proyectos por orden de prioridad:
+
+1. Medido de flujo por evento (residencial)
+costo 20 USD 
+
+2. Huella hidrica
+Consumo de agua por producción.
+medidores signet
+
+3. MOnitoreo aguas residuales (Sytesa)
+Arq. a definir (pos. modulo de calidad y flujo)
+Grasa, conductividad
+Medicion de flujo con solidos .
+
+4. Monitoreo de disp. agua (por region o colonia)
+Potencialmente el centro (100 casas)
+Modelos analiticos y predictivos
+
+
+SCRUM
+
+Reuniones diaras de 15 min. Sig.pregutnas:
+
+1¿Que hice ayer que acerco al equipo al objetivo del sprint?
+2¿Que hare hoy.............................................?
+3. ¿Que impedimentos veo hoy para alcanzar el obj?
+
+Sprints diario a las 9:15am
+
+
+FreeRTOS:
+
+cuidado con  delays de arduino
+Librerias de Sigfox no funcionan con FreeRTOS
+Mejora potencial no tranmitir si son puros ceros (no info. relevante)
+ticks de RTOS
+muxs or sems...
+
+timer deactivation
+
+task 1 -> transmitir
+task 2 -> contar puslos de eventos
+
+
+probablemente el uc de los arduinos ya no aguante mas memoria.
+
+CUIDADO DEBIDO A QUE EL MICRO NO CUENTA CON MUCHA MEMORIA
+
+!CODIGO EFICIENTE!
+
+FreeRTOS config.h
+
+
+Tareas 1.
+
+probar aquacboard
+
+programar por flujo por evento 
+
+v2.0
+
+while()
+
+-> Cuando se conecta a la bateria envia mensajes cada segundo, debe 
+de estar conectado al la computadora para respetar el rango de 10 min
+
+Conectado a computadora por medio de alimentacion de dos pines funciona 
+correctamente.
+
+-> Probable Causa del comportamiento: bateria baja, aparentemente el sistema se resetaba 
+y esto causaba el envio de datos continuo sin respetar el rango de 10 min.
+
+-> En caso de saturar el payload de 10 bytes propuesta de agregar eventos posteriores
+al ultimo evento. Total de agua. También posible anexo de un bit de bandera que
+indique este evento en la metadata
+
+kraken... modulo quimico de calidad de agua. 
+
+-> lte-m -> is for streaming. 
+
+
+

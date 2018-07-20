@@ -1,0 +1,10 @@
+Reunion 16 / 07 / 2018
+
+Tareas:
+
+- agergar el usb booster (ok)
+
+- Programa para dos medidores de flujo (posiblemente por evento.)
+y dos adc (mega)
+
+

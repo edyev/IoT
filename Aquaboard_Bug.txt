@@ -1,0 +1,149 @@
+Bug: envio de mensajes cada min.
+
+Conectado via USB con FTDI y a fuente de 5v funciona correctamente
+indicador de fuente da 20mA a 5.2 v, 4.45 V en RAW, caida de voltaje de 0.7 V. 
+
+cuando en el regulador (VCC) hay 3.1 se presenta el problema
+ 4.2 n fuente sin diodo 3.2 en VCC si funciona
+
+bateria directa con 4.2 v funciona
+
+bateria, tp4056, 4.2 en raw y 3.28 en vcc envia mensajes seguidos al principio (aprox. 3 ) pero despues se estabiliza y 
+envia correctamente. 
+
+
+
+todo lo anterior es sin celda solar
+
+celda solar 
+programa ult. version 
+
+4.1 raw
+3.28 in 
+
+envio 9 mensajes  seguidos aprox cada 30 seg, despues espero 10 min. y volvio a hacer lo mismo
+
+desconectando cela solar comportamiento similar
+
+
+
+page 1 
+Time	Data / Decoding	Location	Link quality	Callbacks
+2018-07-13 11:18:14	8402000000000000000000 			
+2018-07-13 11:04:46	8402000000000000000000 
+Dos aquaboards con el mismo comportamiento
+
+Posibles soluciones:
+
+- aumentar potencia de bateria
+- agergar el usb booster (ok)
+
+dos medidores de flujo (posiblemente por evento.)
+y dos adc
+
+
+DISPOSITIVO CON USB BOOSTER FUNCIONO DE 11:36 AM DE 16/07/18 A 7:06 AM 17/07/18
+TOTAL: 20 HORAS
+COMENZO CON BATERIA CARGADA Y FUNCIONO CON LA CARGA Y LA CELDA SOLAR
+DURANTE TODO ESTE LAPSOS, A PARTIR DE LAS 7:06 ENVIO 20 MENSAJES HASTA LAS 7:14
+Y SE DESCARGO
+BATERIA: 400mV
+raw: 1 V
+
+
+
+
+
+celda flex solar mpt6-75
+
+raw 5.01 
+vcc 3,25
+vbat: 1.9
+
+
+
+
+celda solar 
+
+raw 5.01 
+vcc 3,27
+vbat : 1.9
+reportado: 271 (int_16t)
+
+vrealbat : 3.99
+
+
+
+problema: cuando se descarga bateria no se vuelve a cargar
+
+
+
+susituir celda por bateria 
+
+arduino low power 
+
+7v con fuente y multimetro en serie
+
+
+
+Vbat:3.7 
+
+Vadc:1.86
+
+
+Vcell: 4.11 v
+
+
+-------------------- Inicio de la prueba ---------------------------
+
+Vbat:3.98
+vcell(sim. fuente): 6.0
+
+
+sleep
+I = -284 mA, -275mA, -261mA, -248
+sigfox=-355mA
+
+
+
+
+11:31
+
+isigfox:-321
+
+
+
+11:51
+isigfox:-318 (obserevd thorugh serial)
+not received by backend (possible backend bug same behaviour in another wisol)
+
+
+11:52
+isgfox:-279 
+
+idle:-187
+
+
+
+logs perdidos de picos de corriente
+
+
+
+1326,-263.80,204.00,20/7/2018,12:42:38,
+Could not open file!
+
+2622,-251.00,204.33,20/7/2018,12:53:26,
+
+7803,-240.50,208.00,20/7/2018,13:36:35,
+Could not open file!
+
+
+9100,-214.80,205.00,20/7/2018,13:47:24,
+Could not open file!
+9101,-45.10,203.00,20/7/2018,13:47:24,
+File opened!
+Done!
+9102,-201.10,204.00,20/7/2018,13:47:25,
+Could not open file!
+
+
