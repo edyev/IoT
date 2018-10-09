@@ -19,7 +19,7 @@
 
 #define interruptPin 2
 #define hardwareCounterPin  47
-#define wisolSleep 7 //mega acqboard 5
+#define wisolSleep 5 //mega acqboard 5
 #define breakChar 'C'
 #define keyLocation 10
 #define solenoidMask 0x01
@@ -54,11 +54,11 @@ void setup()
     /*Enable serial communication*/
     Serial.begin(9600);
     /*Create mutext to prevent two tasks accessing serial port*/
-    mutex = xSemaphoreCreateMutex();
-    if( mutex == NULL )
-      while(1){
-           
-      }
+    do{
+      mutex = xSemaphoreCreateMutex();
+      _delay(10);
+    }
+    while( mutex == NULL );
     /*Setup for Timer1 so it can work as hardware pulse counter*/   
     timerCounterSetup();
     /*Create task that sends the data through Sigfox, Required Stack: 134*/
