@@ -6,7 +6,7 @@
  *    Gilberto Mendoza Chavez
  *    Dennis Alberto Mendoza Solís
  *    dms.albertmend@gmail.com
- *    Eddie Vazquez Hernandez
+ *    Eduardo Vazquez Hernandez
  *    
  *    Config: #define portUSE_WDTO      WDTO_15MS
  *    #define configUSE_16_BIT_TICKS              0
@@ -15,7 +15,7 @@
 #include <Arduino_FreeRTOS.h>   
 #include <avr/interrupt.h>
 #include <semphr.h>
-
+#include <EEPROM.h>
 
 #define interruptPin 2
 #define hardwareCounterPin  47
@@ -24,8 +24,8 @@
 #define keyLocation 10
 #define solenoidMask 0x01
 #define solenoid LED_BUILTIN
-#define R_LED 37
-#define G_LED 41
+#define R_LED 5
+#define G_LED 6
 
 TaskHandle_t TaskHandle;  //flow task handle
 TaskHandle_t SendHandle;
