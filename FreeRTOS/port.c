@@ -1,30 +1,71 @@
 /*
- * FreeRTOS Kernel V10.0.0
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * http://www.FreeRTOS.org
- * http://aws.amazon.com/freertos
- *
- * 1 tab == 4 spaces!
- */
+    FreeRTOS V8.2.3 - Copyright (C) 2015 Real Time Engineers Ltd.
+    All rights reserved
+
+    VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
+
+    This file is part of the FreeRTOS distribution.
+
+    FreeRTOS is free software; you can redistribute it and/or modify it under
+    the terms of the GNU General Public License (version 2) as published by the
+    Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
+
+    ***************************************************************************
+    >>!   NOTE: The modification to the GPL is included to allow you to     !<<
+    >>!   distribute a combined work that includes FreeRTOS without being   !<<
+    >>!   obliged to provide the source code for proprietary components     !<<
+    >>!   outside of the FreeRTOS kernel.                                   !<<
+    ***************************************************************************
+
+    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
+    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+    FOR A PARTICULAR PURPOSE.  Full license text is available on the following
+    link: http://www.freertos.org/a00114.html
+
+    ***************************************************************************
+     *                                                                       *
+     *    FreeRTOS provides completely free yet professionally developed,    *
+     *    robust, strictly quality controlled, supported, and cross          *
+     *    platform software that is more than just the market leader, it     *
+     *    is the industry's de facto standard.                               *
+     *                                                                       *
+     *    Help yourself get started quickly while simultaneously helping     *
+     *    to support the FreeRTOS project by purchasing a FreeRTOS           *
+     *    tutorial book, reference manual, or both:                          *
+     *    http://www.FreeRTOS.org/Documentation                              *
+     *                                                                       *
+    ***************************************************************************
+
+    http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
+    the FAQ page "My application does not run, what could be wrong?".  Have you
+    defined configASSERT()?
+
+    http://www.FreeRTOS.org/support - In return for receiving this top quality
+    embedded software for free we request you assist our global community by
+    participating in the support forum.
+
+    http://www.FreeRTOS.org/training - Investing in training allows your team to
+    be as productive as possible as early as possible.  Now you can receive
+    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
+    Ltd, and the world's leading authority on the world's leading RTOS.
+
+    http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
+    including FreeRTOS+Trace - an indispensable productivity tool, a DOS
+    compatible FAT file system, and our tiny thread aware UDP/IP stack.
+
+    http://www.FreeRTOS.org/labs - Where new FreeRTOS products go to incubate.
+    Come and try FreeRTOS+TCP, our new open source TCP/IP stack for FreeRTOS.
+
+    http://www.OpenRTOS.com - Real Time Engineers ltd. license FreeRTOS to High
+    Integrity Systems ltd. to sell under the OpenRTOS brand.  Low cost OpenRTOS
+    licenses offer ticketed support, indemnification and commercial middleware.
+
+    http://www.SafeRTOS.com - High Integrity Systems also provide a safety
+    engineered and independently SIL3 certified version for use in safety and
+    mission critical applications that require provable dependability.
+
+    1 tab == 4 spaces!
+*/
 
 
 #include <stdlib.h>
@@ -40,9 +81,9 @@
  *----------------------------------------------------------*/
 
 /* Start tasks with interrupts enabled. */
-#define portFLAGS_INT_ENABLED           ( (StackType_t) 0x80 )
+#define portFLAGS_INT_ENABLED					( (StackType_t) 0x80 )
 
-#define	portSCHEDULER_ISR               WDT_vect
+#define	portSCHEDULER_ISR						WDT_vect
 
 /*-----------------------------------------------------------*/
 
@@ -68,115 +109,108 @@ static void prvSetupTimerInterrupt( void );
  * pushed the registers onto the stack - causing the 32 registers to be on the
  * stack twice.
  *
- * r1 is set to zero (__zero_reg__) as the compiler expects it to be thus, however
- * some of the math routines make use of R1.
- *
- * r0 is set to __tmp_reg__ as the compiler expects it to be thus.
- *
- * #if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
- * #define __RAMPZ__ 0x3B
- * #define __EIND__  0x3C
- * #endif
+ * r1 is set to zero as the compiler expects it to be thus, however some
+ * of the math routines make use of R1.
  *
  * The interrupts will have been disabled during the call to portSAVE_CONTEXT()
  * so we need not worry about reading/writing to the stack pointer.
  */
 #if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
 /* 3-Byte PC Save */
-#define portSAVE_CONTEXT()                                                              \
-        __asm__ __volatile__ (  "push   __tmp_reg__                             \n\t"   \
-                                "in     __tmp_reg__, __SREG__                   \n\t"   \
-                                "cli                                            \n\t"   \
-                                "push   __tmp_reg__                             \n\t"   \
-                                "in     __tmp_reg__, 0x3B                       \n\t"   \
-                                "push   __tmp_reg__                             \n\t"   \
-                                "in     __tmp_reg__, 0x3C                       \n\t"   \
-                                "push   __tmp_reg__                             \n\t"   \
-                                "push   __zero_reg__                            \n\t"   \
-                                "clr    __zero_reg__                            \n\t"   \
-                                "push   r2                                      \n\t"   \
-                                "push   r3                                      \n\t"   \
-                                "push   r4                                      \n\t"   \
-                                "push   r5                                      \n\t"   \
-                                "push   r6                                      \n\t"   \
-                                "push   r7                                      \n\t"   \
-                                "push   r8                                      \n\t"   \
-                                "push   r9                                      \n\t"   \
-                                "push   r10                                     \n\t"   \
-                                "push   r11                                     \n\t"   \
-                                "push   r12                                     \n\t"   \
-                                "push   r13                                     \n\t"   \
-                                "push   r14                                     \n\t"   \
-                                "push   r15                                     \n\t"   \
-                                "push   r16                                     \n\t"   \
-                                "push   r17                                     \n\t"   \
-                                "push   r18                                     \n\t"   \
-                                "push   r19                                     \n\t"   \
-                                "push   r20                                     \n\t"   \
-                                "push   r21                                     \n\t"   \
-                                "push   r22                                     \n\t"   \
-                                "push   r23                                     \n\t"   \
-                                "push   r24                                     \n\t"   \
-                                "push   r25                                     \n\t"   \
-                                "push   r26                                     \n\t"   \
-                                "push   r27                                     \n\t"   \
-                                "push   r28                                     \n\t"   \
-                                "push   r29                                     \n\t"   \
-                                "push   r30                                     \n\t"   \
-                                "push   r31                                     \n\t"   \
-                                "lds    r26, pxCurrentTCB                       \n\t"   \
-                                "lds    r27, pxCurrentTCB + 1                   \n\t"   \
-                                "in     __tmp_reg__, __SP_L__                   \n\t"   \
-                                "st     x+, __tmp_reg__                         \n\t"   \
-                                "in     __tmp_reg__, __SP_H__                   \n\t"   \
-                                "st     x+, __tmp_reg__                         \n\t"   \
-                             );
+#define portSAVE_CONTEXT()									\
+	__asm__ __volatile__ (	"push	r0						\n\t"	\
+					"in		r0, __SREG__			\n\t"	\
+					"cli							\n\t"	\
+					"push	r0						\n\t"	\
+					"in		r0, 0x3b				\n\t"	\
+					"push	r0						\n\t"	\
+					"in		r0, 0x3c				\n\t"	\
+					"push	r0						\n\t"	\
+					"push	r1						\n\t"	\
+					"clr	r1						\n\t"	\
+					"push	r2						\n\t"	\
+					"push	r3						\n\t"	\
+					"push	r4						\n\t"	\
+					"push	r5						\n\t"	\
+					"push	r6						\n\t"	\
+					"push	r7						\n\t"	\
+					"push	r8						\n\t"	\
+					"push	r9						\n\t"	\
+					"push	r10						\n\t"	\
+					"push	r11						\n\t"	\
+					"push	r12						\n\t"	\
+					"push	r13						\n\t"	\
+					"push	r14						\n\t"	\
+					"push	r15						\n\t"	\
+					"push	r16						\n\t"	\
+					"push	r17						\n\t"	\
+					"push	r18						\n\t"	\
+					"push	r19						\n\t"	\
+					"push	r20						\n\t"	\
+					"push	r21						\n\t"	\
+					"push	r22						\n\t"	\
+					"push	r23						\n\t"	\
+					"push	r24						\n\t"	\
+					"push	r25						\n\t"	\
+					"push	r26						\n\t"	\
+					"push	r27						\n\t"	\
+					"push	r28						\n\t"	\
+					"push	r29						\n\t"	\
+					"push	r30						\n\t"	\
+					"push	r31						\n\t"	\
+					"lds	r26, pxCurrentTCB		\n\t"	\
+					"lds	r27, pxCurrentTCB + 1	\n\t"	\
+					"in		r0, 0x3d				\n\t"	\
+					"st		x+, r0					\n\t"	\
+					"in		r0, 0x3e				\n\t"	\
+					"st		x+, r0					\n\t"	\
+				);
 #else
 /* 2-Byte PC Save */
-#define portSAVE_CONTEXT()                                                              \
-        __asm__ __volatile__ (  "push   __tmp_reg__                             \n\t"   \
-                                "in     __tmp_reg__, __SREG__                   \n\t"   \
-                                "cli                                            \n\t"   \
-                                "push   __tmp_reg__                             \n\t"   \
-                                "push   __zero_reg__                            \n\t"   \
-                                "clr    __zero_reg__                            \n\t"   \
-                                "push   r2                                      \n\t"   \
-                                "push   r3                                      \n\t"   \
-                                "push   r4                                      \n\t"   \
-                                "push   r5                                      \n\t"   \
-                                "push   r6                                      \n\t"   \
-                                "push   r7                                      \n\t"   \
-                                "push   r8                                      \n\t"   \
-                                "push   r9                                      \n\t"   \
-                                "push   r10                                     \n\t"   \
-                                "push   r11                                     \n\t"   \
-                                "push   r12                                     \n\t"   \
-                                "push   r13                                     \n\t"   \
-                                "push   r14                                     \n\t"   \
-                                "push   r15                                     \n\t"   \
-                                "push   r16                                     \n\t"   \
-                                "push   r17                                     \n\t"   \
-                                "push   r18                                     \n\t"   \
-                                "push   r19                                     \n\t"   \
-                                "push   r20                                     \n\t"   \
-                                "push   r21                                     \n\t"   \
-                                "push   r22                                     \n\t"   \
-                                "push   r23                                     \n\t"   \
-                                "push   r24                                     \n\t"   \
-                                "push   r25                                     \n\t"   \
-                                "push   r26                                     \n\t"   \
-                                "push   r27                                     \n\t"   \
-                                "push   r28                                     \n\t"   \
-                                "push   r29                                     \n\t"   \
-                                "push   r30                                     \n\t"   \
-                                "push   r31                                     \n\t"   \
-                                "lds    r26, pxCurrentTCB                       \n\t"   \
-                                "lds    r27, pxCurrentTCB + 1                   \n\t"   \
-                                "in     __tmp_reg__, __SP_L__                   \n\t"   \
-                                "st     x+, __tmp_reg__                         \n\t"   \
-                                "in     __tmp_reg__, __SP_H__                   \n\t"   \
-                                "st     x+, __tmp_reg__                         \n\t"   \
-                             );
+#define portSAVE_CONTEXT()									\
+	__asm__ __volatile__ (	"push	r0						\n\t"	\
+					"in		r0, __SREG__			\n\t"	\
+					"cli							\n\t"	\
+					"push	r0						\n\t"	\
+					"push	r1						\n\t"	\
+					"clr	r1						\n\t"	\
+					"push	r2						\n\t"	\
+					"push	r3						\n\t"	\
+					"push	r4						\n\t"	\
+					"push	r5						\n\t"	\
+					"push	r6						\n\t"	\
+					"push	r7						\n\t"	\
+					"push	r8						\n\t"	\
+					"push	r9						\n\t"	\
+					"push	r10						\n\t"	\
+					"push	r11						\n\t"	\
+					"push	r12						\n\t"	\
+					"push	r13						\n\t"	\
+					"push	r14						\n\t"	\
+					"push	r15						\n\t"	\
+					"push	r16						\n\t"	\
+					"push	r17						\n\t"	\
+					"push	r18						\n\t"	\
+					"push	r19						\n\t"	\
+					"push	r20						\n\t"	\
+					"push	r21						\n\t"	\
+					"push	r22						\n\t"	\
+					"push	r23						\n\t"	\
+					"push	r24						\n\t"	\
+					"push	r25						\n\t"	\
+					"push	r26						\n\t"	\
+					"push	r27						\n\t"	\
+					"push	r28						\n\t"	\
+					"push	r29						\n\t"	\
+					"push	r30						\n\t"	\
+					"push	r31						\n\t"	\
+					"lds	r26, pxCurrentTCB		\n\t"	\
+					"lds	r27, pxCurrentTCB + 1	\n\t"	\
+					"in		r0, 0x3d				\n\t"	\
+					"st		x+, r0					\n\t"	\
+					"in		r0, 0x3e				\n\t"	\
+					"st		x+, r0					\n\t"	\
+				);
 #endif
 
 /*
@@ -185,96 +219,96 @@ static void prvSetupTimerInterrupt( void );
  */
 #if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
 /* 3-Byte PC Restore */
-#define portRESTORE_CONTEXT()                                                           \
-        __asm__ __volatile__ (  "lds    r26, pxCurrentTCB                       \n\t"   \
-                                "lds    r27, pxCurrentTCB + 1                   \n\t"   \
-                                "ld     r28, x+                                 \n\t"   \
-                                "out    __SP_L__, r28                           \n\t"   \
-                                "ld     r29, x+                                 \n\t"   \
-                                "out    __SP_H__, r29                           \n\t"   \
-                                "pop    r31                                     \n\t"   \
-                                "pop    r30                                     \n\t"   \
-                                "pop    r29                                     \n\t"   \
-                                "pop    r28                                     \n\t"   \
-                                "pop    r27                                     \n\t"   \
-                                "pop    r26                                     \n\t"   \
-                                "pop    r25                                     \n\t"   \
-                                "pop    r24                                     \n\t"   \
-                                "pop    r23                                     \n\t"   \
-                                "pop    r22                                     \n\t"   \
-                                "pop    r21                                     \n\t"   \
-                                "pop    r20                                     \n\t"   \
-                                "pop    r19                                     \n\t"   \
-                                "pop    r18                                     \n\t"   \
-                                "pop    r17                                     \n\t"   \
-                                "pop    r16                                     \n\t"   \
-                                "pop    r15                                     \n\t"   \
-                                "pop    r14                                     \n\t"   \
-                                "pop    r13                                     \n\t"   \
-                                "pop    r12                                     \n\t"   \
-                                "pop    r11                                     \n\t"   \
-                                "pop    r10                                     \n\t"   \
-                                "pop    r9                                      \n\t"   \
-                                "pop    r8                                      \n\t"   \
-                                "pop    r7                                      \n\t"   \
-                                "pop    r6                                      \n\t"   \
-                                "pop    r5                                      \n\t"   \
-                                "pop    r4                                      \n\t"   \
-                                "pop    r3                                      \n\t"   \
-                                "pop    r2                                      \n\t"   \
-                                "pop    __zero_reg__                            \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                                "out    0x3C, __tmp_reg__                       \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                                "out    0x3B, __tmp_reg__                       \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                                "out    __SREG__, __tmp_reg__                   \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                             );
+#define portRESTORE_CONTEXT()								\
+	__asm__ __volatile__ (	"lds	r26, pxCurrentTCB		\n\t"	\
+					"lds	r27, pxCurrentTCB + 1	\n\t"	\
+					"ld		r28, x+					\n\t"	\
+					"out	__SP_L__, r28			\n\t"	\
+					"ld		r29, x+					\n\t"	\
+					"out	__SP_H__, r29			\n\t"	\
+					"pop	r31						\n\t"	\
+					"pop	r30						\n\t"	\
+					"pop	r29						\n\t"	\
+					"pop	r28						\n\t"	\
+					"pop	r27						\n\t"	\
+					"pop	r26						\n\t"	\
+					"pop	r25						\n\t"	\
+					"pop	r24						\n\t"	\
+					"pop	r23						\n\t"	\
+					"pop	r22						\n\t"	\
+					"pop	r21						\n\t"	\
+					"pop	r20						\n\t"	\
+					"pop	r19						\n\t"	\
+					"pop	r18						\n\t"	\
+					"pop	r17						\n\t"	\
+					"pop	r16						\n\t"	\
+					"pop	r15						\n\t"	\
+					"pop	r14						\n\t"	\
+					"pop	r13						\n\t"	\
+					"pop	r12						\n\t"	\
+					"pop	r11						\n\t"	\
+					"pop	r10						\n\t"	\
+					"pop	r9						\n\t"	\
+					"pop	r8						\n\t"	\
+					"pop	r7						\n\t"	\
+					"pop	r6						\n\t"	\
+					"pop	r5						\n\t"	\
+					"pop	r4						\n\t"	\
+					"pop	r3						\n\t"	\
+					"pop	r2						\n\t"	\
+					"pop	r1						\n\t"	\
+					"pop	r0						\n\t"	\
+					"out	0x3c, r0				\n\t"	\
+					"pop	r0						\n\t"	\
+					"out	0x3b, r0				\n\t"	\
+					"pop	r0						\n\t"	\
+					"out	__SREG__, r0			\n\t"	\
+					"pop	r0						\n\t"	\
+				);
 #else
 /* 2-Byte PC Restore */
-#define portRESTORE_CONTEXT()                                                           \
-        __asm__ __volatile__ (  "lds    r26, pxCurrentTCB                       \n\t"   \
-                                "lds    r27, pxCurrentTCB + 1                   \n\t"   \
-                                "ld     r28, x+                                 \n\t"   \
-                                "out    __SP_L__, r28                           \n\t"   \
-                                "ld     r29, x+                                 \n\t"   \
-                                "out    __SP_H__, r29                           \n\t"   \
-                                "pop    r31                                     \n\t"   \
-                                "pop    r30                                     \n\t"   \
-                                "pop    r29                                     \n\t"   \
-                                "pop    r28                                     \n\t"   \
-                                "pop    r27                                     \n\t"   \
-                                "pop    r26                                     \n\t"   \
-                                "pop    r25                                     \n\t"   \
-                                "pop    r24                                     \n\t"   \
-                                "pop    r23                                     \n\t"   \
-                                "pop    r22                                     \n\t"   \
-                                "pop    r21                                     \n\t"   \
-                                "pop    r20                                     \n\t"   \
-                                "pop    r19                                     \n\t"   \
-                                "pop    r18                                     \n\t"   \
-                                "pop    r17                                     \n\t"   \
-                                "pop    r16                                     \n\t"   \
-                                "pop    r15                                     \n\t"   \
-                                "pop    r14                                     \n\t"   \
-                                "pop    r13                                     \n\t"   \
-                                "pop    r12                                     \n\t"   \
-                                "pop    r11                                     \n\t"   \
-                                "pop    r10                                     \n\t"   \
-                                "pop    r9                                      \n\t"   \
-                                "pop    r8                                      \n\t"   \
-                                "pop    r7                                      \n\t"   \
-                                "pop    r6                                      \n\t"   \
-                                "pop    r5                                      \n\t"   \
-                                "pop    r4                                      \n\t"   \
-                                "pop    r3                                      \n\t"   \
-                                "pop    r2                                      \n\t"   \
-                                "pop    __zero_reg__                            \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                                "out    __SREG__, __tmp_reg__                   \n\t"   \
-                                "pop    __tmp_reg__                             \n\t"   \
-                             );
+#define portRESTORE_CONTEXT()								\
+	__asm__ __volatile__ (	"lds	r26, pxCurrentTCB		\n\t"	\
+					"lds	r27, pxCurrentTCB + 1	\n\t"	\
+					"ld		r28, x+					\n\t"	\
+					"out	__SP_L__, r28			\n\t"	\
+					"ld		r29, x+					\n\t"	\
+					"out	__SP_H__, r29			\n\t"	\
+					"pop	r31						\n\t"	\
+					"pop	r30						\n\t"	\
+					"pop	r29						\n\t"	\
+					"pop	r28						\n\t"	\
+					"pop	r27						\n\t"	\
+					"pop	r26						\n\t"	\
+					"pop	r25						\n\t"	\
+					"pop	r24						\n\t"	\
+					"pop	r23						\n\t"	\
+					"pop	r22						\n\t"	\
+					"pop	r21						\n\t"	\
+					"pop	r20						\n\t"	\
+					"pop	r19						\n\t"	\
+					"pop	r18						\n\t"	\
+					"pop	r17						\n\t"	\
+					"pop	r16						\n\t"	\
+					"pop	r15						\n\t"	\
+					"pop	r14						\n\t"	\
+					"pop	r13						\n\t"	\
+					"pop	r12						\n\t"	\
+					"pop	r11						\n\t"	\
+					"pop	r10						\n\t"	\
+					"pop	r9						\n\t"	\
+					"pop	r8						\n\t"	\
+					"pop	r7						\n\t"	\
+					"pop	r6						\n\t"	\
+					"pop	r5						\n\t"	\
+					"pop	r4						\n\t"	\
+					"pop	r3						\n\t"	\
+					"pop	r2						\n\t"	\
+					"pop	r1						\n\t"	\
+					"pop	r0						\n\t"	\
+					"out	__SREG__, r0			\n\t"	\
+					"pop	r0						\n\t"	\
+				);
 #endif
 /*-----------------------------------------------------------*/
 
@@ -432,6 +466,7 @@ uint16_t usAddress;
 
 BaseType_t xPortStartScheduler( void )
 {
+
 	/* Setup the relevant timer hardware to generate the tick. */
 	prvSetupTimerInterrupt();
 
@@ -452,7 +487,7 @@ void vPortEndScheduler( void )
 	/* It is unlikely that the AVR port will get stopped.  If required simply
 	disable the tick interrupt here. */
 
-	wdt_disable();	// disable Watchdog Timer
+	wdt_disable();											// disable Watchdog Timer
 }
 /*-----------------------------------------------------------*/
 
@@ -481,7 +516,7 @@ void vPortYieldFromTick( void ) __attribute__ ( ( hot, flatten, naked ) );
 void vPortYieldFromTick( void )
 {
 	portSAVE_CONTEXT();
-
+	
 	sleep_reset();		//	 reset the sleep_mode() faster than sleep_disable();
 
 	if( xTaskIncrementTick() != pdFALSE )
@@ -514,9 +549,12 @@ void prvSetupTimerInterrupt( void )
 	 * the context is saved at the start of vPortYieldFromTick().  The tick
 	 * count is incremented after the context is saved.
 	 *
+	 * use ISR_NOBLOCK where there is an important timer running, that should preempt the scheduler.
+	 *
 	 */
+//	ISR(portSCHEDULER_ISR, ISR_NAKED ISR_NOBLOCK)
 	ISR(portSCHEDULER_ISR, ISR_NAKED) __attribute__ ((hot, flatten));
-	ISR(portSCHEDULER_ISR)
+	ISR(portSCHEDULER_ISR, ISR_NAKED)
 	{
 		vPortYieldFromTick();
 		__asm__ __volatile__ ( "reti" );
@@ -528,7 +566,9 @@ void prvSetupTimerInterrupt( void )
 	 * tick count.  We don't need to switch context, this can only be done by
 	 * manual calls to taskYIELD();
 	 *
+	 * use ISR_NOBLOCK where there is an important timer running, that should preempt the scheduler.
 	 */
+//	ISR(portSCHEDULER_ISR, ISR_NOBLOCK)
 	ISR(portSCHEDULER_ISR) __attribute__ ((hot, flatten));
 	ISR(portSCHEDULER_ISR)
 	{
