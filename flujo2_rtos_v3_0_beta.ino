@@ -9,6 +9,8 @@
       Eddie Vazquez Hernandez
       Config: #define portUSE_WDTO      WDTO_15MS
 */
+
+
 #include <Arduino_FreeRTOS.h>
 #include <avr/interrupt.h>
 #include <semphr.h>
@@ -24,11 +26,14 @@
 
 TaskHandle_t TaskHandle;
 SemaphoreHandle_t xSync = NULL;
-QueueHandle_t xQueue;
+QueueHandle_t xQueue, xEventQueue;
+static TaskHandle_t xTaskToNotify = NULL;
 
 uint8_t event_buf[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t event_index = 0;
 volatile bool event_active = false;
+volatile uint16_t duration ;
+
 //bool terminate_flag = 0;
 uint8_t trig_counter = 0;
 uint16_t time_counter = 0;
@@ -46,10 +51,12 @@ enum state{
   TRIGGER = 0x3A,
   ACTIVE = 0x4A
 }_state;
+
 typedef union {
   uint16_t number;
   uint8_t bytes[2];
 }   UINT16_t;
+
 ISR(TIMER2_OVF_vect){
   time_counter++;
 }
@@ -57,21 +64,20 @@ void setup()
 {
   /*Enable serial communication*/
   Serial.begin(9600);
-  /*Instantiate sync as a binary smph to sync TaskFlow and Interrupt*/
-   
-  Serial.println("Cr");
-  
+  /*Instantiate sync as a binary smph to sync TaskFlow and Interrupt*/ 
   xSync = xSemaphoreCreateBinary();
-  xQueue = xQueueCreate(1, sizeof(uint16_t));
+  xQueue = xQueueCreate(1, sizeof(uint16_t*));
+  xEventQueue = xQueueCreate(12, sizeof(uint8_t*));
   if(xSync == NULL)
     Serial.println("Error creating semph");
   else
     Serial.println("Semph created");
-    
-  if(xSemaphoreTake(xSync, 0) == pdTRUE)
-    Serial.println("Semph taken");
+
+  if(xEventQueue == NULL)
+    Serial.println("eQueue error");
   else
-    Serial.println("Semph not taken");
+    Serial.println("eQueue created");
+
 
   if(xQueue == NULL)
     Serial.println("Queue error");
@@ -84,7 +90,7 @@ void setup()
   /*Create task that sends the data through Sigfox, Required Stack: 134*/
   xTaskCreate(TaskSend, "TaskSend", 134, NULL, 2, NULL);
   /*Create task that reads the flow sensor, Required Stack 100*/
-  xTaskCreate(TaskFlow, "TaskFlow", 100, NULL, 1, &TaskHandle);
+  xTaskCreate(TaskFlow, "TaskFlow", 200, NULL, 1, &TaskHandle);
   /*Suspend TaskFlow until it is triggered*/
   //vTaskSuspend(TaskHandle);
 }
@@ -114,11 +120,16 @@ static void TaskSend(void* pvParameters)
 /* TaskFlow with priority 1 */
 static void TaskFlow(void* pvParameters)
 {
-  uint16_t* data;
+  volatile uint16_t data;
   while(1){
-      if(xSemaphoreTake(xSync, 0) == pdTRUE ){
-        xQueueReceive(xQueue, &(data), (TickType_t ) 0);
-        Serial.println((*data));
+      
+      xQueueReceive(xQueue, &(data), (TickType_t )0);
+      Serial.print(".");Serial.println(data);
+      if(data > 20000 && TCNT1 > 10){
+          
+          xQueueSend(xEventQueue,&(pulses_2_lt),(TickType_t )0);
+          Serial.println("Finished!");
+          TCNT1 = 0;
       }
   }
 }
@@ -126,6 +137,7 @@ static void TaskFlow(void* pvParameters)
 void timerCounterSetup() {
   //EEPROM.write(logAddress, SETUP);
   /*Declare our interrupt pin and hardware counter pin as inputs*/
+  duration = 4096;
   pinMode(interruptPin, INPUT);
   pinMode(hardwareCounterPin, INPUT);
   pinMode(wisolSleep, OUTPUT);
@@ -147,26 +159,31 @@ void timerCounterSetup() {
 
 void trigger_int() {
   /*This is the ISR for INT1*/
-  uint16_t* duration ;
-  Serial.println(EICRA, HEX);
+  BaseType_t *pxHigherPriorityTaskWoken;
+  //Serial.println(EICRA, HEX);
   if (EICRA == 0x0C){
   detachInterrupt(digitalPinToInterrupt(interruptPin));
-
+  xTaskResumeFromISR(TaskHandle);
   BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-  xSemaphoreGiveFromISR(xSync,&pxHigherPriorityTaskWoken  );
+  //xSemaphoreGiveFromISR(xSync,&pxHigherPriorityTaskWoken  );
   bitSet(TCCR2B, CS21);
   attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
   
   }
   else{
     detachInterrupt(digitalPinToInterrupt(interruptPin));
-    *duration = (12000);
+    TCCR2B =0;
+
+    duration = (time_counter << 8) | TCNT2;
+    
     //Serial.println(time_counter);
     //Serial.println(TCNT2);
-    
-    xQueueSend(xQueue,(uint16_t*) duration, 0);
+   
+    xQueueOverwriteFromISR(xQueue,(void*) &duration,pxHigherPriorityTaskWoken);
     time_counter = 0;
     TCNT2 = 0;
+    bitSet(TCCR2B, CS21);
+
     attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
     
   }
