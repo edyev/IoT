@@ -58,7 +58,11 @@ typedef union {
 }   UINT16_t;
 
 ISR(TIMER2_OVF_vect){
-  time_counter++;
+  uint16_t data = 60000;
+  /*Timeout*/
+  if(time_counter++ >= 3600)
+    xQueueOverwriteFromISR(xQueue, (void*)&data,(TickType_t) 0 );
+  
 }
 void setup()
 {
@@ -68,7 +72,7 @@ void setup()
   xSync = xSemaphoreCreateBinary();
   xQueue = xQueueCreate(1, sizeof(uint16_t*));
   xEventQueue = xQueueCreate(12, sizeof(uint8_t*));
-  if(xSync == NULL)
+  /*if(xSync == NULL)
     Serial.println("Error creating semph");
   else
     Serial.println("Semph created");
@@ -88,7 +92,7 @@ void setup()
   timerCounterSetup();
   
   /*Create task that sends the data through Sigfox, Required Stack: 134*/
-  xTaskCreate(TaskSend, "TaskSend", 134, NULL, 2, NULL);
+  xTaskCreate(TaskSend, "TaskSend", 200, NULL, 2, NULL);
   /*Create task that reads the flow sensor, Required Stack 100*/
   xTaskCreate(TaskFlow, "TaskFlow", 200, NULL, 1, &TaskHandle);
   /*Suspend TaskFlow until it is triggered*/
@@ -113,7 +117,7 @@ static void TaskSend(void* pvParameters)
     taskEXIT_CRITICAL();
     /*Wait for 10 minutes to send a new message to Sigfox.
       1 sec =~ 62 tick units*/
-    vTaskDelay(60000 / portTICK_PERIOD_MS);
+    vTaskDelay(600000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -121,23 +125,47 @@ static void TaskSend(void* pvParameters)
 static void TaskFlow(void* pvParameters)
 {
   volatile uint16_t data;
+  volatile uint8_t volume;
+  volatile uint8_t vol;
+
   while(1){
       
-      xQueueReceive(xQueue, &(data), (TickType_t )0);
-      Serial.print(".");Serial.println(data);
-      if(data > 20000 && TCNT1 > 10){
+      xQueuePeek(xQueue, &(data), (TickType_t )0);
+      //Serial.print(".");Serial.println(data);
+      if(data > 50000){
+         if(TCNT1 > 10){
+          volume = pulses_2_lt(TCNT1);
+          xQueueSend(xEventQueue, (void*)&volume,(TickType_t )0);
+          /*Serial.print("Vol->");
+          Serial.println(volume);
+          Serial.print("Size->");
+          Serial.println(uxQueueMessagesWaiting(xEventQueue));
           
-          xQueueSend(xEventQueue,&(pulses_2_lt),(TickType_t )0);
+
+          
+          
+          
           Serial.println("Finished!");
+           */
+         }
           TCNT1 = 0;
+          time_counter = 0;
+          TCCR2B = 0;
+          TCNT2 = 0;
+          detachInterrupt(digitalPinToInterrupt(interruptPin));
+ 
+
+          attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
+     
       }
+      
   }
 }
 
 void timerCounterSetup() {
   //EEPROM.write(logAddress, SETUP);
   /*Declare our interrupt pin and hardware counter pin as inputs*/
-  duration = 4096;
+  duration = 0;
   pinMode(interruptPin, INPUT);
   pinMode(hardwareCounterPin, INPUT);
   pinMode(wisolSleep, OUTPUT);
@@ -163,10 +191,10 @@ void trigger_int() {
   //Serial.println(EICRA, HEX);
   if (EICRA == 0x0C){
   detachInterrupt(digitalPinToInterrupt(interruptPin));
-  xTaskResumeFromISR(TaskHandle);
-  BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
   //xSemaphoreGiveFromISR(xSync,&pxHigherPriorityTaskWoken  );
   bitSet(TCCR2B, CS21);
+  //bitSet(TCCR2B, CS20);
+  
   attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
   
   }
@@ -175,14 +203,11 @@ void trigger_int() {
     TCCR2B =0;
 
     duration = (time_counter << 8) | TCNT2;
-    
-    //Serial.println(time_counter);
-    //Serial.println(TCNT2);
-   
     xQueueOverwriteFromISR(xQueue,(void*) &duration,pxHigherPriorityTaskWoken);
     time_counter = 0;
     TCNT2 = 0;
     bitSet(TCCR2B, CS21);
+    //bitSet(TCCR2B, CS20);
 
     attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
     
@@ -225,33 +250,50 @@ uint8_t pulses_2_lt(uint16_t var) {
 void Send_Sensors() {
   /*Set the payloadSize to 12 bytes*/
   const uint8_t payloadSize = 12;
-  uint8_t buf_str[payloadSize];
   /*Initialize buffers
   Store buffer in flash instead of RAM
   Helps with stability issues */
+
   char PROGMEM bufer[34]; 
   char bufer2[24] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   const char *header = "AT$SF=";
   const char *ending = "\n";
   /*copying events in buf_str*/
-  //EEPROM.write(logAddress, SEND);
-  //event_buf[11] = FLOW_100;
-  memcpy(buf_str, event_buf, 12);
-  event_index = 0;
-
-  /*clearing event array*/
-  for (int i = 0; i < 12; i++) {
-    event_buf[i] = 0;
+  
+  volatile uint8_t data ;
+  /*volatile uint16_t*/
+  
+  /*xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+  Serial.println(data);
+  xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+  Serial.println(data);
+  xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+  Serial.println(data);
+  xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+  Serial.println(data);
+  xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+  Serial.println(data);*/
+  uint8_t n_events = uxQueueMessagesWaiting(xEventQueue);
+  for(uint8_t i = 0; i < 12; i++){
+     if(i < n_events)
+       xQueueReceive(xEventQueue, &(data), (TickType_t)0);
+     else
+       data = 0;
+     //Serial.println(data);
+     bufer2[2 * i] = c2h(data >> 4);
+     bufer2[2 * i + 1] = c2h(data);
   }
+    
+
+    
+  xQueueReset(xEventQueue);
+  /*clearing event array*/
+  
   /*Copy header to bufer*/
   strcpy(bufer, header);
 
   /*Fill buffer2 with the water flow info in hexadecimal*/
-  for (int i = 0; i < 12; i++)
-  {
-    bufer2[2 * i] = c2h(buf_str[i] >> 4);
-    bufer2[2 * i + 1] = c2h(buf_str[i]);
-  }
+ 
   /*Add water flow info to bufer*/
   strcat(bufer, bufer2);
 
@@ -261,7 +303,7 @@ void Send_Sensors() {
   /*Awakening the Sigfox Module*/
   
   digitalWrite(wisolSleep, HIGH);
-  delayMicroseconds(100);
+  delayMicroseconds(1000);
   /*Channel reset to have the correct frequency*/
   Serial.print(F("AT$RC\n"));
   /*Send data through sigfox*/
@@ -273,4 +315,5 @@ void Send_Sensors() {
   /*Turn off the Sigfox  module*/
   digitalWrite(wisolSleep, LOW);
   delayMicroseconds(100);
+  
 }
