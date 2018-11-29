@@ -16,27 +16,19 @@
 #include <semphr.h>
 #include <avr/pgmspace.h>
 
-
-
 #define interruptPin 3
 #define hardwareCounterPin  5
 #define wisolSleep 4
 #define logAddress 10
-
 
 TaskHandle_t TaskHandle;
 SemaphoreHandle_t xSync = NULL;
 QueueHandle_t xQueue, xEventQueue;
 static TaskHandle_t xTaskToNotify = NULL;
 
-uint8_t event_buf[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint8_t event_index = 0;
-volatile bool event_active = false;
 volatile uint16_t duration ;
-
-//bool terminate_flag = 0;
-uint8_t trig_counter = 0;
 uint16_t time_counter = 0;
+
 enum parse_keys{
   FLOW_50,
   FLOW_100, 
@@ -44,33 +36,21 @@ enum parse_keys{
   LEVEL}
   parse_flag; 
 
-enum state{
-  SETUP = 0x0A,
-  SEND = 0x1A,
-  FLOW = 0x2A,
-  TRIGGER = 0x3A,
-  ACTIVE = 0x4A
-}_state;
-
-typedef union {
-  uint16_t number;
-  uint8_t bytes[2];
-}   UINT16_t;
-
 ISR(TIMER2_OVF_vect){
   uint16_t data = 60000;
   /*Timeout*/
-  if(time_counter++ >= 3600)
+  if(time_counter++ >= 7200)
     xQueueOverwriteFromISR(xQueue, (void*)&data,(TickType_t) 0 );
   
 }
+
 void setup()
 {
   /*Enable serial communication*/
   Serial.begin(9600);
-  /*Instantiate sync as a binary smph to sync TaskFlow and Interrupt*/ 
-  xSync = xSemaphoreCreateBinary();
+  /*Queue for sending pulse duration from ISR to TaskFlow*/ 
   xQueue = xQueueCreate(1, sizeof(uint16_t*));
+  /*Queue for storing events */
   xEventQueue = xQueueCreate(12, sizeof(uint8_t*));
   /*if(xSync == NULL)
     Serial.println("Error creating semph");
@@ -96,7 +76,6 @@ void setup()
   /*Create task that reads the flow sensor, Required Stack 100*/
   xTaskCreate(TaskFlow, "TaskFlow", 200, NULL, 1, &TaskHandle);
   /*Suspend TaskFlow until it is triggered*/
-  //vTaskSuspend(TaskHandle);
 }
 
 
@@ -124,9 +103,10 @@ static void TaskSend(void* pvParameters)
 /* TaskFlow with priority 1 */
 static void TaskFlow(void* pvParameters)
 {
-  volatile uint16_t data;
+  /*Receives pulse duration from ISR*/
+  volatile uint16_t data; 
+  /*Holds the volume*/
   volatile uint8_t volume;
-  volatile uint8_t vol;
 
   while(1){
       
@@ -135,7 +115,10 @@ static void TaskFlow(void* pvParameters)
       if(data > 50000){
          if(TCNT1 > 10){
           volume = pulses_2_lt(TCNT1);
-          xQueueSend(xEventQueue, (void*)&volume,(TickType_t )0);
+          if(uxQueueMessagesWaiting(xEventQueue) < 12 && volume > 0)
+            xQueueSend(xEventQueue, (void*)&volume,(TickType_t )0);
+          
+            
           /*Serial.print("Vol->");
           Serial.println(volume);
           Serial.print("Size->");
@@ -153,8 +136,6 @@ static void TaskFlow(void* pvParameters)
           TCCR2B = 0;
           TCNT2 = 0;
           detachInterrupt(digitalPinToInterrupt(interruptPin));
- 
-
           attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_int, FALLING);
      
       }
@@ -234,11 +215,11 @@ uint8_t pulses_2_lt(uint16_t var) {
      Sunwoald 1/4 QC
      y = 0.0004x - 0.0258
      where y: volume in lt and x: pulses
+     result = (uint8_t)round((0.0004*var - 0.0258)*10); //volume in dlt (decilitres)
+     64.5 < x otherwise result is negative
   */
 
-  //result = (uint8_t)round((0.0004*var - 0.0258)*10); //volume in dlt (decilitres)
-
-
+  
   result = (uint8_t)round((0.0004 * var - 0.0258) * 20); //volume in 0.05 lt
 
 
